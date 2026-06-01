@@ -6,6 +6,9 @@ const mongoose = require("mongoose");
 const axios = require("axios");
 require("dotenv").config();
 
+console.log("Debug - MONGO_URI present:", !!process.env.MONGO_URI);
+console.log("Debug - MONGO_URI value:", process.env.MONGO_URI?.substring(0, 50) + "...");
+
 const { initBot, startPolling, stopPolling } = require("./botManager");
 
 const Wallet = require("./models/Wallet");
