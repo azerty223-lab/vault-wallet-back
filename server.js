@@ -12,6 +12,13 @@ const Wallet = require("./models/Wallet");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://vault-wallet-front.vercel.app",
+  ...(process.env.FRONTEND_URL || "").split(","),
+]
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 let bot;
 let chatId;
@@ -34,7 +41,7 @@ mongoose
 
 app.use(
   cors({
-    origin: (process.env.FRONTEND_URL || "http://localhost:5173").split(","),
+    origin: allowedOrigins,
     credentials: true,
   })
 );
