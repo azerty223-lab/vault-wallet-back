@@ -6,9 +6,6 @@ const mongoose = require("mongoose");
 const axios = require("axios");
 require("dotenv").config();
 
-console.log("Debug - MONGO_URI present:", !!process.env.MONGO_URI);
-console.log("Debug - MONGO_URI value:", process.env.MONGO_URI?.substring(0, 50) + "...");
-
 const { initBot, startPolling, stopPolling } = require("./botManager");
 
 const Wallet = require("./models/Wallet");
@@ -45,18 +42,29 @@ if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
 
 const mongoURI = process.env.MONGO_URI;
 
+if (process.env.NODE_ENV === "production" && !mongoURI) {
+  console.error("MONGO_URI environment variable is missing.");
+  console.error("Add MONGO_URI to Railway Variables and redeploy.");
+  process.exit(1);
+}
+
 if (!mongoURI) {
   console.error("❌ MONGO_URI environment variable is missing!");
   console.error("📍 Add MONGO_URI to Railway Variables and redeploy");
 }
 
 mongoose
-  .connect(mongoURI || "mongodb://localhost:27017/vaultwalletdb")
-  .then(() => console.log("✅ MongoDB connected"))
+  .connect(mongoURI || "mongodb://127.0.0.1:27017/vaultwalletdb", {
+    serverSelectionTimeoutMS: 10000,
+  })
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    startHttpServer();
+  })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
-    if (process.env.NODE_ENV === "production" && !process.env.MONGO_URI) {
-      console.error("🚨 Server starting without database (MONGO_URI missing)");
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
     }
   });
 
@@ -280,12 +288,14 @@ process.on('SIGTERM', () => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Vault Wallet server running on port ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`📦 MongoDB: ${mongoURI ? "Connected (Atlas)" : "Using local fallback"}`);
+function startHttpServer() {
+  app.listen(PORT, () => {
+    console.log(`🚀 Vault Wallet server running on port ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`📦 MongoDB: ${mongoURI ? "Connected (Atlas)" : "Using local fallback"}`);
   
-  if (bot) {
-    startPolling();
-  }
-});
+    if (bot) {
+      startPolling();
+    }
+  });
+}
