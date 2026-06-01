@@ -15,6 +15,15 @@ const Wallet = require("./models/Wallet");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+const sessionSecret = process.env.SESSION_SECRET || "vault_wallet_dev_secret";
+if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  console.warn("⚠️ SESSION_SECRET not set, using insecure fallback");
+}
 const allowedOrigins = [
   "http://localhost:5173",
   "https://vault-wallet-front.vercel.app",
@@ -34,13 +43,22 @@ if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
   console.log("⚠️ Telegram bot not initialized (missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID)");
 }
 
-const mongoURI =
-  process.env.MONGO_URI || "mongodb://localhost:27017/vaultwalletdb";
+const mongoURI = process.env.MONGO_URI;
+
+if (!mongoURI) {
+  console.error("❌ MONGO_URI environment variable is missing!");
+  console.error("📍 Add MONGO_URI to Railway Variables and redeploy");
+}
 
 mongoose
-  .connect(mongoURI)
+  .connect(mongoURI || "mongodb://localhost:27017/vaultwalletdb")
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err.message);
+    if (process.env.NODE_ENV === "production" && !process.env.MONGO_URI) {
+      console.error("🚨 Server starting without database (MONGO_URI missing)");
+    }
+  });
 
 app.use(
   cors({
@@ -51,10 +69,14 @@ app.use(
 app.use(bodyParser.json());
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "vault_wallet_secret",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === "production" },
+    cookie: { 
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
+    },
   })
 );
 
@@ -105,16 +127,6 @@ app.get("/api/ipinfo", async (req, res) => {
           ip: data.ip,
         })
       },
-      {
-        name: "ip-api.com",
-        enabled: true,
-        url: `http://ip-api.com/json/${visitorIp || ''}?fields=status,country,countryCode,query`,
-        parse: (data) => ({
-          country: data.country,
-          country_code: data.countryCode,
-          ip: data.query,
-        })
-      },
     ];
 
     for (const service of services) {
@@ -137,6 +149,31 @@ app.get("/api/ipinfo", async (req, res) => {
               region: result.region || null,
               source: service.name.toLowerCase()
             });
+          }
+        }
+      } catch (err) {
+        continue;
+      }
+    }
+
+    return res.json({
+      success: true,
+      ip: visitorIp || "0.0.0.0",
+      country: "United States", 
+      country_code: "US",
+      fallback: true
+    });
+
+  } catch (error) {
+    res.json({
+      success: true,
+      ip: "0.0.0.0",
+      country: "United States", 
+      country_code: "US",
+      fallback: true
+    });
+  }
+});
           }
         }
       } catch (err) {
@@ -271,6 +308,7 @@ process.on('SIGTERM', () => {
 app.listen(PORT, () => {
   console.log(`🚀 Vault Wallet server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`📦 MongoDB: ${mongoURI ? "Connected (Atlas)" : "Using local fallback"}`);
   
   if (bot) {
     startPolling();
