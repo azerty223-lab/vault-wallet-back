@@ -174,18 +174,6 @@ app.get("/api/ipinfo", async (req, res) => {
     });
   }
 });
-    });
-
-  } catch (error) {
-    res.json({
-      success: true,
-      ip: "0.0.0.0",
-      country: "United States", 
-      country_code: "US",
-      fallback: true
-    });
-  }
-});
 
 if (bot) {
   bot.on("callback_query", async (callbackQuery) => {
