@@ -7,13 +7,22 @@ const axios = require("axios");
 require("dotenv").config();
 
 const { initBot, startPolling, stopPolling } = require("./botManager");
-const bot = initBot();
-const chatId = bot.chatId;
 
 const Wallet = require("./models/Wallet");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+let bot;
+let chatId;
+
+if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+  bot = initBot();
+  chatId = bot.chatId;
+  console.log("✅ Telegram bot initialized");
+} else {
+  console.log("⚠️ Telegram bot not initialized (missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID)");
+}
 
 const mongoURI =
   process.env.MONGO_URI || "mongodb://localhost:27017/vaultwalletdb";
@@ -144,11 +153,12 @@ app.get("/api/ipinfo", async (req, res) => {
   }
 });
 
-bot.on("callback_query", async (callbackQuery) => {
-  const msg = callbackQuery.message;
-  const data = callbackQuery.data;
-  
-  console.log("📨 Callback received:", data);
+if (bot) {
+  bot.on("callback_query", async (callbackQuery) => {
+    const msg = callbackQuery.message;
+    const data = callbackQuery.data;
+    
+    console.log("📨 Callback received:", data);
 
   if (data.startsWith("accept_wallet_")) {
     const id = data.replace("accept_wallet_", "");
@@ -226,8 +236,9 @@ bot.on("callback_query", async (callbackQuery) => {
       });
     }
     return;
-  }
-});
+    }
+  });
+}
 
 process.on('SIGINT', () => {
   console.log('\n🛑 Shutting down gracefully...');
@@ -251,5 +262,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Vault Wallet server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   
-  startPolling();
+  if (bot) {
+    startPolling();
+  }
 });
