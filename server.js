@@ -162,7 +162,7 @@ app.get("/api/ipinfo", async (req, res) => {
       country: "United States", 
       country_code: "US",
       fallback: true
-    });
+});
 
   } catch (error) {
     res.json({
@@ -174,19 +174,6 @@ app.get("/api/ipinfo", async (req, res) => {
     });
   }
 });
-          }
-        }
-      } catch (err) {
-        continue;
-      }
-    }
-
-    return res.json({
-      success: true,
-      ip: visitorIp || "0.0.0.0",
-      country: "United States",
-      country_code: "US",
-      fallback: true
     });
 
   } catch (error) {
