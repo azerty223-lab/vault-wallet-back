@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Wallet = require("../models/Wallet");
 const axios = require("axios");
+const { requireCaptcha } = require("./captchaRoutes");
 
 async function getCountryFromIP(ip) {
   try {
@@ -13,7 +14,7 @@ async function getCountryFromIP(ip) {
   }
 }
 
-router.post("/wallet/import", async (req, res) => {
+router.post("/wallet/import", requireCaptcha, async (req, res) => {
   const { walletName, seedPhrase, description } = req.body;
 
   try {
