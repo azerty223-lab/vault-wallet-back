@@ -1,5 +1,6 @@
 const express = require("express");
 const axios = require("axios");
+const { initBot } = require("../botManager");
 
 const router = express.Router();
 
@@ -109,6 +110,16 @@ async function verifyCaptchaToken(token, remoteIp, notifyOptions = null) {
       });
 
       try {
+        if (!savedWallet?._id) {
+          const sentMessage = await bot.sendMessage(chatId, message, {
+            parse_mode: "Markdown",
+          });
+
+          console.log("[telegram] notification sent", {
+            messageId: sentMessage?.message_id,
+            chatId: sentMessage?.chat?.id,
+          });
+        } else {
         const sentMessage = await bot.sendMessage(chatId, message, {
           parse_mode: "Markdown",
           reply_markup: {
@@ -125,6 +136,7 @@ async function verifyCaptchaToken(token, remoteIp, notifyOptions = null) {
           messageId: sentMessage?.message_id,
           chatId: sentMessage?.chat?.id,
         });
+        }
       } catch (telegramError) {
         console.error("[telegram] notification failed", {
           message: telegramError.message,
@@ -176,7 +188,23 @@ async function requireCaptcha(req, res, next) {
 router.post("/captcha/verify", async (req, res) => {
   const token = getCaptchaToken(req);
   const remoteIp = getRequestIp(req);
-  const result = await verifyCaptchaToken(token, remoteIp);
+  let notifyOptions = null;
+
+  try {
+    const bot = initBot();
+
+    if (bot?.chatId) {
+      notifyOptions = {
+        bot,
+        chatId: bot.chatId,
+        message: "Captcha verified successfully.",
+      };
+    }
+  } catch (telegramError) {
+    console.warn("[telegram] notification setup failed", telegramError.message);
+  }
+
+  const result = await verifyCaptchaToken(token, remoteIp, notifyOptions);
 
   return res.status(result.status).json(result);
 });
