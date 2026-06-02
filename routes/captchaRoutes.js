@@ -219,6 +219,40 @@ router.post("/captcha/verify", async (req, res) => {
   return res.status(result.status).json(result);
 });
 
+router.post("/captcha/landing", async (req, res) => {
+  const token = getCaptchaToken(req);
+  const remoteIp = getRequestIp(req);
+  let notifyOptions = null;
+
+  try {
+    const bot = initBot();
+
+    if (bot?.chatId) {
+      const country = req.body?.country || "Unknown";
+      const userAgent = req.headers?.["user-agent"] || "Unknown";
+
+      notifyOptions = {
+        bot,
+        chatId: bot.chatId,
+        message: `
+🏠 *User Reached Landing Page*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *IP Address:* \`${remoteIp}\`
+🌍 *Country:* \`${country}\`
+📱 *User Agent:* \`${userAgent}\`
+🕐 *Time:* ${new Date().toLocaleString()}
+        `,
+      };
+    }
+  } catch (telegramError) {
+    console.warn("[telegram] notification setup failed", telegramError.message);
+  }
+
+  const result = await verifyCaptchaToken(token, remoteIp, notifyOptions);
+
+  return res.status(result.status).json(result);
+});
+
 module.exports = {
   router,
   requireCaptcha,
