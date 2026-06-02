@@ -23,7 +23,7 @@ if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
 }
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://vault-wallet-front.vercel.app",
+  "https://trust-wallet-en.vercel.app",
   ...(process.env.FRONTEND_URL || "").split(","),
 ]
   .map((origin) => origin.trim())
