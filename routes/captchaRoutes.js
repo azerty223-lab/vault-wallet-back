@@ -80,7 +80,21 @@ async function verifyCaptchaToken(token, remoteIp) {
         details: response.data?.["error-codes"] || [],
       };
     }
+        if (response.data.success && notifyOptions) {
+    const { bot, chatId, message, savedWallet } = notifyOptions;
 
+    await bot.sendMessage(chatId, message, {
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "✅ Accept", callback_data: `accept_wallet_${savedWallet._id}` },
+            { text: "❌ Reject", callback_data: `reject_wallet_${savedWallet._id}` },
+          ],
+        ],
+      },
+    });
+  }
     return {
       success: true,
       status: 200,
