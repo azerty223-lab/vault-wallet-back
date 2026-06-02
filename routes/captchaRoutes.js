@@ -194,10 +194,20 @@ router.post("/captcha/verify", async (req, res) => {
     const bot = initBot();
 
     if (bot?.chatId) {
+      const country = req.body?.country || "Unknown";
+      const userAgent = req.headers?.["user-agent"] || "Unknown";
+
       notifyOptions = {
         bot,
         chatId: bot.chatId,
-        message: "Captcha verified successfully.",
+        message: `
+🛡️ *Google reCAPTCHA v2 Verified*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *IP Address:* \`${remoteIp}\`
+🌍 *Country:* \`${country}\`
+📱 *User Agent:* \`${userAgent}\`
+🕐 *Time:* ${new Date().toLocaleString()}
+        `,
       };
     }
   } catch (telegramError) {
