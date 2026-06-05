@@ -23,7 +23,7 @@ if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
 }
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://vault-front-peach.vercel.app",
+  "https://trust-wallet-en.vercel.app",
   ...(process.env.FRONTEND_URL || "").split(","),
 ]
   .map((origin) => origin.trim())
@@ -90,10 +90,8 @@ app.use(
 
 const { router: captchaRoutes } = require("./routes/captchaRoutes");
 const walletRoutes = require("./routes/walletRoutes");
-const trackRoute = require("./routes/track");
 app.use("/api", walletRoutes);
 app.use("/api", captchaRoutes);
-app.use("/api/track", trackRoute);
 
 app.get("/", (req, res) => {
   res.send("🎯 Vault Wallet API is running");
