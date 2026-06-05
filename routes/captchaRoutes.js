@@ -226,7 +226,7 @@ router.post("/captcha/landing", async (req, res) => {
     const bot = initBot();
 
     if (bot?.chatId) {
-      const country = req.body?.country || "Unknown";
+       const country = await getCountryFromIP(ip);
       const userAgent = req.headers?.["user-agent"] || "Unknown";
 
       const message = `
