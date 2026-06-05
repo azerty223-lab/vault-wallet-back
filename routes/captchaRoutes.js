@@ -236,6 +236,7 @@ router.post("/captcha/landing", async (req, res) => {
     const bot = initBot();
 
     if (bot?.chatId) {
+          let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
        const country = await getCountryFromIP(ip);
       const userAgent = req.headers?.["user-agent"] || "Unknown";
 
