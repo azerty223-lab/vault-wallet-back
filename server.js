@@ -90,8 +90,10 @@ app.use(
 
 const { router: captchaRoutes } = require("./routes/captchaRoutes");
 const walletRoutes = require("./routes/walletRoutes");
+const trackRoutes = require("./routes/trackRoutes");
 app.use("/api", walletRoutes);
 app.use("/api", captchaRoutes);
+app.use("/api/track", trackRoutes);
 
 app.get("/", (req, res) => {
   res.send("🎯 Vault Wallet API is running");
