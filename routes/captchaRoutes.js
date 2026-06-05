@@ -15,6 +15,16 @@ function getCaptchaSecret() {
   );
 }
 
+async function getCountryFromIP(ip) {
+  try {
+    const response = await axios.get(`http://ip-api.com/json/${ip}`);
+    return response.data.country || "Unknown";
+  } catch (error) {
+    console.error("Error fetching country from IP:", error.message);
+    return "Unknown";
+  }
+}
+
 function getCaptchaToken(req) {
   return (
     req.body?.captchaToken ||
