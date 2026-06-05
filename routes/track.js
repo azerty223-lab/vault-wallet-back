@@ -31,10 +31,9 @@ const BANNED_ISPS = [
 
 // Keyword fragments that indicate non-residential ISPs
 const bannedKeywords = [
-  "hosting", "datacenter", "data center", "server", "vps", "virtual private",
-  "dedicated", "cloud", "colocation", "colo", "cdn", "content delivery",
-  "vpn", "proxy", "anonymiz", "tunnel", "tor ", "exit node",
-  "transit", "backbone", "peering", "security", "firewall", "managed services"
+  "hosting", "datacenter", "data center", "vps", "virtual private",
+  "colocation", "colo", "cdn", "content delivery",
+  "vpn", "proxy", "anonymiz", "tor exit", "exit node",
 ];
 
 const BLOCKED_ASNS = [
@@ -64,9 +63,9 @@ function isHeadlessBrowser(userAgent, headers) {
 
   if (headlessSigns.some(sign => userAgent.includes(sign))) return true;
 
-  const required = ["accept-language", "accept-encoding", "cache-control"];
+  const required = ["accept-language", "accept-encoding"];
   const missing = required.filter(h => !headers[h]);
-  if (missing.length > 1) return true;
+  if (missing.length >= 2) return true;
 
   return false;
 }
@@ -145,6 +144,7 @@ router.post("/", async (req, res) => {
 
     // 1. Headless browser detection
     if (isHeadlessBrowser(userAgent, headers)) {
+      console.warn(`[TRACK BLOCK] headless | ip=${ip} | ua=${userAgent}`);
       await BlockedIP.updateOne({ ip }, { $set: { reason: "Headless browser detected" } }, { upsert: true });
       return res.status(403).json({ error: "Access denied: Automated browser detected" });
     }
@@ -152,6 +152,7 @@ router.post("/", async (req, res) => {
     // 2. Behavioral analysis
     const behavior = analyzeBehavior(ip, path);
     if (behavior) {
+      console.warn(`[TRACK BLOCK] behavior=${behavior} | ip=${ip}`);
       await BlockedIP.updateOne({ ip }, { $set: { reason: `Behavioral: ${behavior}` } }, { upsert: true });
       return res.status(429).json({ error: "Too many requests or suspicious pattern" });
     }
@@ -161,6 +162,7 @@ router.post("/", async (req, res) => {
     const isProxyUA = /proxy|vpn|anonym|tor|hidemy|tunnel|private internet access|nord|express|surfshark|proton|cyberghost|mullvad|windscribe/i.test(userAgent);
 
     if (isBot) {
+      console.warn(`[TRACK BLOCK] bot-ua | ip=${ip} | ua=${userAgent}`);
       await BlockedIP.updateOne({ ip }, { $set: { reason: "Bot user-agent" } }, { upsert: true });
       return res.status(403).json({ error: "Access denied: Bots not allowed" });
     }
@@ -192,6 +194,7 @@ router.post("/", async (req, res) => {
       }
 
       if (ispBlocked) {
+        console.warn(`[TRACK BLOCK] isp | ip=${ip} | isp=${isp}`);
         await BlockedIP.updateOne({ ip }, { $set: { reason: `Blocked ISP: ${isp}` } }, { upsert: true });
         return res.status(403).json({ error: "Access denied: Hosting/Proxy ISP detected" });
       }
@@ -219,6 +222,7 @@ router.post("/", async (req, res) => {
 
     if (isVPN || isProxyUA) {
       const reason = isVPN ? "VPN/Proxy detected" : "Suspicious user-agent";
+      console.warn(`[TRACK BLOCK] vpn | ip=${ip} | reason=${reason}`);
       await BlockedIP.updateOne({ ip }, { $set: { reason } }, { upsert: true });
       ipCache.set(ip, { blocked: true, timestamp: Date.now(), reason });
       return res.status(403).json({ error: `Access denied: ${reason}` });
