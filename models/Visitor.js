@@ -8,6 +8,7 @@ const visitorSchema = new mongoose.Schema({
   country: String,
   tlsVersion: String,
   isMobile: { type: Boolean, default: false },
+  riskScore: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 

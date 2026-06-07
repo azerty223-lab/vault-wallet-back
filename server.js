@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const axios = require("axios");
 require("dotenv").config();
@@ -75,6 +76,7 @@ app.use(
   })
 );
 app.use(bodyParser.json());
+app.use(cookieParser());
 app.use(
   session({
     secret: sessionSecret,
